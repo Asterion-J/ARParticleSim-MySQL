@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>WEBAR</title>
+
+  <!-- model-viewer -->
+  <script type="module"
+    src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+  </script>
+
+  <style>
+    /* GLOBAL */
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden; background: #000;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+
+    button { font-family: inherit; }
+
+    /* START SCREEN */
+    #start-screen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      z-index: 10;
+    }
+    #start-screen .card {
+      text-align: center;
+      padding: 2rem;
+      border: 2px solid #4EAFFF;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #4EAFFF;
+      max-width: 450px;
+      animation: fadeIn 0.8s ease-out;
+    }
+    #start-screen h1 {
+      margin: 0 0 1rem;
+      font-size: 2rem;
+      color: #4EAFFF;
+    }
+    #start-screen p {
+      margin: 0 0 2rem;
+      color: #ccc;
+      line-height: 1.4;
+    }
+    #start-screen button {
+      padding: 0.7rem 1.4rem;
+      background: #4EAFFF;
+      border: none;
+      border-radius: 6px;
+      color: #000;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #start-screen button:hover {
+      background: #32b0f2;
+    }
+    #start-screen model-viewer#startMV {
+      position: absolute;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 200px;
+      height: 200px;
+      background: transparent;
+      z-index: 11;
+      pointer-events: auto;  /* habilita interacción */
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* APP PRINCIPAL */
+    #app { display: none; }
+
+    /* Webcam ampliada esquina izq. */
+    #webcam {
+      position: absolute; top: 1rem; left: 1rem;
+      width: 320px; height: 240px;
+      border: 2px solid #4EAFFF;
+      border-radius: 8px;
+      object-fit: cover;
+      z-index: 3;
+    }
+
+    /* Visor principal */
+    model-viewer#mainMV {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: transparent;
+      z-index: 2;
+    }
+
+    /* Instrucciones esquina inf. izq. */
+    #info-box {
+      position: absolute; bottom: 1.5rem; left: 1rem;
+      max-width: 300px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #4EAFFF;
+      box-shadow: 0 0 15px #4EAFFF;
+      padding: 1rem;
+      border-radius: 8px;
+      line-height: 1.4;
+      pointer-events: none;
+      z-index: 4;
+    }
+    #info-box p { margin: 0; font-size: 0.95rem; }
+
+    /* Sidebar derecha */
+    #sidebar {
+      position: absolute; top: 0; right: 0;
+      height: 100%; width: 300px;
+      transform: translateX(100%); transition: transform .3s;
+      background: rgba(20, 20, 20, 0.95);
+      box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column;
+      z-index: 5;
+    }
+    #sidebar.open { transform: translateX(0); }
+    #toggle-btn {
+      position: absolute; top: 1rem; right: 1rem;
+      width: 40px; height: 40px;
+      background: #4EAFFF; border: none;
+      border-radius: 4px; cursor: pointer;
+      color: #022; font-size: 1.2rem;
+      z-index: 6;
+    }
+    #sidebar h2 {
+      margin: 1rem 0 .5rem;
+      color: #fff; text-align: center;
+    }
+    #model-list {
+      flex: 1; overflow-y: auto; padding: 0 1rem;
+    }
+    .thumb {
+      width: 100%; height: 120px;
+      margin: .5rem 0;
+      border: 1px solid #444; border-radius: 4px;
+      cursor: pointer; background: #111;
+      pointer-events: auto;
+    }
+
+    /* Drag & Drop overlay */
+    #dropzone {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.1);
+      display: none; z-index: 7;
+      pointer-events: none;
+    }
+    #dropzone.active {
+      display: block; pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE INICIO -->
+  <div id="start-screen">
+    <div class="card">
+      <h1>Bienvenido a la WebAR para la simulacion de particulas 3D</h1>
+      <p>Explora e interactúa con tus modelos tridimensionales.<br>
+         Selecciona y disfruta de la experiencia.</p>
+      <button onclick="startApp()">Ingresar</button>
+    </div>
+
+    <!-- Preview interactivo fuera del cuadro -->
+    <model-viewer
+      id="startMV"
+      src="modelos/pingu.glb"
+      alt="Preview 3D"
+      camera-controls
+      auto-rotate
+      environment-image="neutral"
+      shadow-intensity="1"
+      background-color="transparent"
+      interaction-prompt="none">
+    </model-viewer>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="app">
+    <video id="webcam" autoplay playsinline muted></video>
+
+    <model-viewer
+      id="mainMV"
+      alt="Visor 3D"
+      camera-controls
+      auto-rotate
+      environment-image="neutral"
+      shadow-intensity="1"
+      background-color="transparent"
+      touch-action="pan-y">
+    </model-viewer>
+
+    <div id="info-box">
+      <p>Selecciona un modelo para comenzar.</p>
+    </div>
+
+    <button id="toggle-btn">▶</button>
+
+    <div id="sidebar">
+      <h2>Modelos 3D</h2>
+      <div id="model-list">
+        <model-viewer class="thumb"
+                      src="modelos/Estradiol.glb"
+                      camera-controls auto-rotate
+                      interaction-prompt="none"
+                      shadow-intensity="0.3"
+                      data-src="modelos/Estradiol.glb">
+        </model-viewer>
+        <model-viewer class="thumb"
+                      src="modelos/Fulvestrant.glb"
+                      camera-controls auto-rotate
+                      interaction-prompt="none"
+                      shadow-intensity="0.3"
+                      data-src="modelos/Fulvestrant.glb">
+        </model-viewer>
+        <model-viewer class="thumb"
+                      src="modelos/pingu.glb"
+                      camera-controls auto-rotate
+                      interaction-prompt="none"
+                      shadow-intensity="0.3"
+                      data-src="modelos/pingu.glb">
+        </model-viewer>
+      </div>
+    </div>
+
+    <div id="dropzone"></div>
+  </div>
+
+  <script>
+    /* Inicializa la app */
+    function startApp() {
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initWebcam();
+      initSidebar();
+      updateInstructions('Arrastra para girar · Rueda para zoom · Doble-clic para centrar');
+    }
+
+    /* Webcam */
+    function initWebcam() {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          document.getElementById('webcam').srcObject = stream;
+        })
+        .catch(err => console.error('Error cámara:', err));
+    }
+
+    /* Sidebar (toggle, click y drag-drop) */
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle  = document.getElementById('toggle-btn');
+      const thumbs  = document.querySelectorAll('.thumb');
+      const dropzone= document.getElementById('dropzone');
+      const mainMV  = document.getElementById('mainMV');
+
+      toggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        toggle.textContent = sidebar.classList.contains('open') ? '◀' : '▶';
+      });
+
+      thumbs.forEach(el => {
+        el.addEventListener('click', () => {
+          loadModel(el.dataset.src);
+          sidebar.classList.remove('open');
+          toggle.textContent = '▶';
+        });
+        el.draggable = true;
+        el.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('modelSrc', el.dataset.src);
+          dropzone.classList.add('active');
+        });
+        el.addEventListener('dragend', () => {
+          dropzone.classList.remove('active');
+        });
+      });
+
+      dropzone.addEventListener('dragover', e => e.preventDefault());
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('active');
+      });
+      dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        const src = e.dataTransfer.getData('modelSrc');
+        if (src) loadModel(src);
+        dropzone.classList.remove('active');
+        sidebar.classList.remove('open');
+        toggle.textContent = '▶';
+      });
+    }
+
+    /* Carga modelo en visor principal */
+    function loadModel(src) {
+      const mainMV = document.getElementById('mainMV');
+      mainMV.setAttribute('src', src);
+      mainMV.style.display = 'block';
+    }
+
+    /* Actualiza instrucciones */
+    function updateInstructions(text) {
+      document.getElementById('info-box').innerHTML = `<p>${text}</p>`;
+    }
+  </script>
+</body>
+</html>
